@@ -1,7 +1,13 @@
 <?php
+declare(strict_types=1);
+
 namespace Flynn314\Matrix;
 
+use Flynn314\Matrix\Entity\RelatesTo;
+use Flynn314\Matrix\Entity\Thumbnail;
 use Flynn314\Matrix\Exception\MatrixClientException;
+use Flynn314\Matrix\Service\VideoService;
+use Flynn314\Matrix\ValueObject\MsgType;
 use GuzzleHttp\Exception\GuzzleException;
 use Psr\Http\Client\ClientInterface;
 
@@ -26,7 +32,7 @@ readonly class MatrixClient
      */
     public function emote(string $roomId, string $message, string $messageFormatted = null, ?string $threadId = null): string
     {
-        return $this->postRoomMessage($roomId, $message, $messageFormatted, $threadId, ['msgtype' => 'm.emote']);
+        return $this->postRoomMessage($roomId, $message, $messageFormatted, $threadId, ['msgtype' => MsgType::EMOTE]);
     }
 
     /**
@@ -34,7 +40,7 @@ readonly class MatrixClient
      */
     public function notice(string $roomId, string $message, string $messageFormatted = null, ?string $threadId = null): string
     {
-        return $this->postRoomMessage($roomId, $message, $messageFormatted, $threadId, ['msgtype' => 'm.notice']);
+        return $this->postRoomMessage($roomId, $message, $messageFormatted, $threadId, ['msgtype' => MsgType::NOTICE]);
     }
 
     /**
@@ -42,28 +48,57 @@ readonly class MatrixClient
      */
     public function filePost(string $roomId, string $file, ?string $threadId = null): string
     {
+        $data = [
+            'info' => [
+                'mimetype' => mime_content_type($file),
+                'size' => filesize($file),
+    //            'w' => 512,
+    //            'h' => 512,
+            ],
+        ];
+
+        if (str_contains($data['info']['mimetype'], 'image')) {
+            $data['msgtype'] = MsgType::IMAGE;
+        } elseif(str_contains($data['info']['mimetype'], 'audio')) {
+            // https://spec.matrix.org/latest/client-server-api/#fallback-for-mimage-mvideo-maudio-and-mfile
+            $data['msgtype'] = MsgType::AUDIO;
+        } elseif(str_contains($data['info']['mimetype'], 'video')) {
+            return $this->videoPost($roomId, $file, null, $threadId);
+        } else {
+            $data['msgtype'] = MsgType::FILE;
+        }
+
+        $data['url'] = $this->fileUpload($file);
+
+        return $this->postRoomMessage($roomId, basename($file), '', $threadId, $data);
+    }
+
+    /**
+     * @throws MatrixClientException
+     */
+    public function videoPost(string $roomId, string $file, ?string $thumb, ?string $threadId = null): string
+    {
+        $vs = new VideoService();
+        $vd = $vs->getVideoDataByFilepath($file);
+
         $url = $this->fileUpload($file);
 
-        $mime = mime_content_type($file);
-
-        $data = [];
-        if (strstr($mime, 'image')) {
-            $data['msgtype'] = 'm.image';
-        } elseif(strstr($mime, 'audio')) {
-            // https://spec.matrix.org/latest/client-server-api/#fallback-for-mimage-mvideo-maudio-and-mfile
-            $data['msgtype'] = 'm.audio';
-        } else {
-            $data['msgtype'] = 'm.file';
-        }
-        // todo implement m.location
-
-        $data['url'] = $url;
-        $data['info'] = [
-            'mimetype' => $mime,
-            'size' => filesize($file),
-//            'w' => 512,
-//            'h' => 512,
+        $data = [
+            'msgtype' => MsgType::VIDEO,
+            'url' => $url,
+            'w' => $vd->getWidth(),
+            'h' => $vd->getHeight(),
+            'info' => [
+                'mimetype' => mime_content_type($file),
+                'size' => filesize($file),
+                'duration' => $vd->getDuration(),
+                'xyz.amorgan.blurhash' => 'UIIXNu_NOZ^ltlxaxEe-01a0IUELS$MxRONG',
+            ],
         ];
+        if ($thumb) {
+            $thumbUrl = $this->fileUpload($thumb);
+            $data['info'] = array_merge($data['info'], (new Thumbnail($thumb, $thumbUrl))->toArray());
+        }
 
         return $this->postRoomMessage($roomId, basename($file), '', $threadId, $data);
     }
@@ -105,35 +140,47 @@ readonly class MatrixClient
     }
 
     /**
-     * @param string      $roomId
-     * @param string      $body [message]
-     * @param string|null $formattedBody
-     * @param null|string $threadId
-     * @param array       $data
-     * @return string
      * @throws MatrixClientException
      */
     private function postRoomMessage(string $roomId, string $body, string $formattedBody = null, ?string $threadId = null, array $data = []): string
     {
-        $data['msgtype'] = $data['msgtype'] ?? 'm.text';
+        $data['msgtype'] = (new MsgType($data['msgtype'] ?? MsgType::TEXT))->getValue();
         $data['body'] = $body;
         if ($formattedBody) {
             $data['format'] = 'org.matrix.custom.html';
             $data['formatted_body'] = $formattedBody;
         }
         if ($threadId) {
-            $data['m.relates_to'] = [
-                'rel_type' => 'm.thread',
-                'event_id' => $threadId,
-                'is_falling_back' => true,
-                'm.in_reply_to' => [
-                    'event_id' => $threadId,
-                ],
-            ];
+            $data['m.relates_to'] = (new RelatesTo($threadId))->toArray();
         }
 
         $uri = sprintf('rooms/%s/send/m.room.message', $roomId);
 
+        $data = $this->request('post', $uri, $data);
+        if (!isset($data['event_id']) || !$data['event_id']) {
+            throw new MatrixClientException('Unable to post message');
+        }
+
+        return $data['event_id'];
+    }
+
+    /**
+     * @throws MatrixClientException
+     */
+    public function postLocation(string $roomId, float $lat, float $lon, string $locationName, ?string $threadId = null): string
+    {
+        $data = [
+            'msgtype' => (new MsgType(MsgType::LOCATION))->getValue(),
+            'geo_uri' => sprintf('geo:%.10f,%.10f', $lat, $lon),
+            'body' => $locationName,
+        ];
+        // todo $data['info'] = (new Thumbnail())->toArray();
+
+        if ($threadId) {
+            $data['m.relates_to'] = (new RelatesTo($threadId))->toArray();
+        }
+
+        $uri = sprintf('rooms/%s/send/m.room.message', $roomId);
         $data = $this->request('post', $uri, $data);
         if (!isset($data['event_id']) || !$data['event_id']) {
             throw new MatrixClientException('Unable to post message');
