@@ -19,18 +19,6 @@
 			"Flynn314\\Matrix\\": "src"
 		}
 	},
-	"autoload-dev": {
-        "psr-4": {
-            "Flynn314\\Matrix\\Tests\\": "tests/"
-        }
-    },
-    "extra": {
-        "laravel": {
-            "providers": [
-                "Flynn314\\Matrix\\MattermostServiceProvider"
-            ]
-        }
-    },
 	"minimum-stability": "dev",
 	"prefer-stable": true
 }
