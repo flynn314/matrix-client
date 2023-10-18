@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Flynn314\Matrix;
 
+use Flynn314\Matrix\Entity\File;
 use Flynn314\Matrix\Entity\RelatesTo;
 use Flynn314\Matrix\Entity\Thumbnail;
 use Flynn314\Matrix\Exception\MatrixClientException;
@@ -111,10 +112,60 @@ readonly class MatrixClient
         $filename = basename($file);
         $fileData = file_get_contents($file);
 
-        $data = $this->request('post', 'upload?filename='.$filename, [
+        return $this->binaryUpload($fileData, $filename, mime_content_type($file));
+    }
+
+    /**
+     * @throws MatrixClientException
+     */
+    public function mediaPostByUri(
+        string  $roomId,
+        string  $messageType,
+        File    $media,
+        ?File   $thumb = null,
+        ?string $threadId = null
+    ): string {
+        $data = [
+            'msgtype' => (new MsgType($messageType))->getValue(),
+            'url' => $media->getUri(),
+            'w' => $media->getWidth(),
+            'h' => $media->getHeight(),
+            'info' => [
+                'mimetype' => $media->getMime(),
+                'size' => $media->getFileSize(),
+                'duration' => $media->getDuration(),
+            ],
+        ];
+        if ($media->getBlurHash()) {
+            $data['info']['xyz.amorgan.blurhash'] = $media->getBlurHash();
+        }
+
+        if ($thumb) {
+            $thumbData = [
+                'thumbnail_info' => [
+                    'mimetype' => $thumb->getMime(),
+                    'w' => $thumb->getWidth(),
+                    'h' => $thumb->getHeight(),
+                    'size' => $thumb->getFileSize(),
+                ],
+                'thumbnail_url' => $thumb->getUri(),
+            ];
+
+            $data['info'] = array_merge($data['info'], $thumbData);
+        }
+
+        return $this->postRoomMessage($roomId, $media->getFileName(), '', $threadId, $data);
+    }
+
+    /**
+     * @throws MatrixClientException
+     */
+    public function binaryUpload(string $fileData, string $fileName, string $mimeType): string
+    {
+        $data = $this->request('post', 'upload?filename='.$fileName, [
             'binary' => $fileData,
         ], [
-            'Content-Type' => mime_content_type($file),
+            'Content-Type' => $mimeType,
         ]);
         if (!isset($data['content_uri']) || !$data['content_uri']) {
             throw new MatrixClientException('File upload error');
