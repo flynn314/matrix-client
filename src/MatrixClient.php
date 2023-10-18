@@ -128,9 +128,9 @@ readonly class MatrixClient
         $data = [
             'msgtype' => (new MsgType($messageType))->getValue(),
             'url' => $media->getUri(),
-            'w' => $media->getWidth(),
-            'h' => $media->getHeight(),
             'info' => [
+                'w' => $media->getWidth(),
+                'h' => $media->getHeight(),
                 'mimetype' => $media->getMime(),
                 'size' => $media->getFileSize(),
                 'duration' => $media->getDuration(),
