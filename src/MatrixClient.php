@@ -4,7 +4,9 @@ declare(strict_types=1);
 namespace Flynn314\Matrix;
 
 use Flynn314\Matrix\Entity\File;
+use Flynn314\Matrix\Entity\Message;
 use Flynn314\Matrix\Entity\RelatesTo;
+use Flynn314\Matrix\Entity\Sender;
 use Flynn314\Matrix\Entity\Thumbnail;
 use Flynn314\Matrix\Exception\MatrixClientException;
 use Flynn314\Matrix\Service\VideoService;
@@ -19,6 +21,28 @@ readonly class MatrixClient
         private string $token,
         private ClientInterface $httpClient
     ) {}
+
+    /**
+     * @deprecated Not deprected, just to get your attention! Experemental method. Incomplete.
+     * @param string $roomId
+     * @param int $limit
+     * @return array|Message[]
+     */
+    public function getMessages(string $roomId, int $limit = 10): array
+    {
+        $data = $this->request('get', sprintf('rooms/%s/messages?dir=b&limit=%d', $roomId, $limit));
+        $events = [];
+        foreach ($data['chunk'] as $raw) {
+            if (!isset($raw['content']['msgtype'])) {
+                continue;
+            }
+            if ('m.text' === $raw['content']['msgtype']) {
+                $events[] = new Message(new Sender($raw['sender'], $raw['user_id']), $raw['content']['body']);
+            }
+        }
+
+        return $events;
+    }
 
     /**
      * @throws MatrixClientException
