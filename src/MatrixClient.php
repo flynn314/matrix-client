@@ -19,7 +19,8 @@ readonly class MatrixClient
     public function __construct(
         private string $baseUrl,
         private string $token,
-        private ClientInterface $httpClient
+        private ClientInterface $httpClient,
+        private string|null $selfUserId = null,
     ) {}
 
     /**
@@ -262,6 +263,30 @@ readonly class MatrixClient
         }
 
         return $data['event_id'];
+    }
+
+    public function typingIndicatorStart(string $roomId, int $timeOut = 120): void
+    {
+        if (!$this->selfUserId) {
+            return;
+        }
+        if ($timeOut > 0) {
+            $data = [
+                'typing' => true,
+                'timeout' => (int) ($timeOut . '000'),
+            ];
+        } else {
+            $data = [
+                'typing' => false,
+            ];
+        }
+
+        $this->request('put', sprintf('rooms/%s/typing/%s', $roomId, $this->selfUserId), $data);
+    }
+
+    public function typingIndicatorStop(string $roomId): void
+    {
+        $this->typingIndicatorStart($roomId, 0);
     }
 
     /**
