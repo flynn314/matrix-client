@@ -38,7 +38,8 @@ readonly class MatrixClient
                 continue;
             }
             if ('m.text' === $raw['content']['msgtype']) {
-                $events[] = new Message(new Sender($raw['sender'], $raw['user_id']), $raw['content']['body']);
+                $createdAt = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->setTimestamp((int) ($raw['origin_server_ts'] / 1000));
+                $events[] = new Message(new Sender($raw['sender'], $raw['user_id']), $raw['content']['body'], $createdAt);
             }
         }
 

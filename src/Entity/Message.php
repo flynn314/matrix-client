@@ -8,6 +8,7 @@ readonly class Message
     public function __construct(
         private Sender $sender,
         private string $body,
+        private \DateTimeImmutable $createdAt,
     ) {}
 
     public function getBody(): string
@@ -18,5 +19,10 @@ readonly class Message
     public function getSender(): Sender
     {
         return $this->sender;
+    }
+
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
     }
 }
