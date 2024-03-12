@@ -42,7 +42,7 @@ readonly class MatrixClient
                 $events[] = new Message(new Sender($raw['sender'], $raw['user_id']), trim((string) $raw['content']['body']), $createdAt);
             } elseif ('m.emote' === $raw['content']['msgtype']) {
                 $createdAt = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->setTimestamp((int) ($raw['origin_server_ts'] / 1000));
-                $events[] = new Message(new Sender($raw['sender'], $raw['user_id']), trim((string) $raw['content']['body']), $createdAt);
+                $events[] = new Message(new Sender($raw['sender'], $raw['user_id']), trim((string) $raw['content']['body']), $createdAt, Message::TYPE_ACTION);
             }
         }
 
