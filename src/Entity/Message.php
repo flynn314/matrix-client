@@ -8,12 +8,16 @@ readonly class Message
     public const TYPE_MESSAGE = 'message';
     public const TYPE_ACTION = 'action';
 
+    private \DateTimeImmutable $createdAt;
+
     public function __construct(
         private Sender $sender,
         private string $body,
-        private \DateTimeImmutable $createdAt,
+        \DateTimeInterface $createdAt,
         private string $type = self::TYPE_MESSAGE,
-    ) {}
+    ) {
+        $this->createdAt = \DateTimeImmutable::createFromInterface($createdAt);
+    }
 
     public function getBody(): string
     {
