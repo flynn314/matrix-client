@@ -12,7 +12,7 @@ readonly class Message
         private Sender $sender,
         private string $body,
         private \DateTimeImmutable $createdAt,
-        private string $type = self::TYPE_ACTION,
+        private string $type = self::TYPE_MESSAGE,
     ) {}
 
     public function getBody(): string
