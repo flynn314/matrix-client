@@ -3,18 +3,19 @@ declare(strict_types = 1);
 
 namespace Flynn314\Matrix\Entity;
 
-readonly class Message
+class Message
 {
     public const TYPE_MESSAGE = 'message';
     public const TYPE_ACTION = 'action';
 
-    private \DateTimeImmutable $createdAt;
+    private readonly \DateTimeImmutable $createdAt;
+    private string $summary = '';
 
     public function __construct(
-        private Sender $sender,
-        private string $body,
+        readonly private Sender $sender,
+        readonly private string $body,
         \DateTimeInterface $createdAt,
-        private string $type = self::TYPE_MESSAGE,
+        readonly private string $type = self::TYPE_MESSAGE,
     ) {
         $this->createdAt = \DateTimeImmutable::createFromInterface($createdAt);
     }
@@ -22,6 +23,11 @@ readonly class Message
     public function getBody(): string
     {
         return $this->body;
+    }
+
+    public function getSummary(): string
+    {
+        return $this->summary;
     }
 
     public function getSender(): Sender
@@ -32,6 +38,13 @@ readonly class Message
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function setSummary(string $summary): static
+    {
+        $this->summary = $summary;
+
+        return $this;
     }
 
     public function isAction(): bool
