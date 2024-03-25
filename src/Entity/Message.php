@@ -7,6 +7,7 @@ class Message
 {
     public const TYPE_MESSAGE = 'message';
     public const TYPE_ACTION = 'action';
+    public const TYPE_EVENT = 'event';
 
     private readonly \DateTimeImmutable $createdAt;
     private string $summary = '';
@@ -50,5 +51,10 @@ class Message
     public function isAction(): bool
     {
         return static::TYPE_ACTION === $this->type;
+    }
+
+    public function isEvent(): bool
+    {
+        return static::TYPE_EVENT === $this->type;
     }
 }
