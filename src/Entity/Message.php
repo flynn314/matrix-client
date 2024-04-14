@@ -8,6 +8,7 @@ class Message
     public const TYPE_MESSAGE = 'message';
     public const TYPE_ACTION = 'action';
     public const TYPE_EVENT = 'event';
+    public const TYPE_FILE = 'file';
 
     private readonly \DateTimeImmutable $createdAt;
     private string $summary = '';
