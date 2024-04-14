@@ -58,4 +58,9 @@ class Message
     {
         return static::TYPE_EVENT === $this->type;
     }
+
+    public function isFile(): bool
+    {
+        return static::TYPE_FILE === $this->type;
+    }
 }
