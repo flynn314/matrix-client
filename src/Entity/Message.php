@@ -12,6 +12,7 @@ class Message
 
     private readonly \DateTimeImmutable $createdAt;
     private string $summary = '';
+    private string|null $extraData = null;
 
     public function __construct(
         readonly private Sender $sender,
@@ -42,9 +43,21 @@ class Message
         return $this->createdAt;
     }
 
+    public function getExtraData(): string|null
+    {
+        return $this->extraData;
+    }
+
     public function setSummary(string $summary): static
     {
         $this->summary = $summary;
+
+        return $this;
+    }
+
+    public function setExtraData(string|null $data): static
+    {
+        $this->extraData = $data;
 
         return $this;
     }
