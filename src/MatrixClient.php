@@ -46,11 +46,12 @@ readonly class MatrixClient
                 $events[] = new Message(new Sender($raw['sender'], $raw['user_id']), trim((string) $raw['content']['body']), $createdAt, Message::TYPE_ACTION);
             } elseif (MsgType::IMAGE === $raw['content']['msgtype']) {
                 $message = new Message(new Sender($raw['sender'], $raw['user_id']), trim((string) $raw['content']['body']), $createdAt, Message::TYPE_IMAGE);
-                $message->setInfo($raw['content']['info'] ?? []);
+                $message->setInfo($raw['content']['info']);
 
                 list($protocol, $aap) = explode('//', $raw['content']['url'], 2);
                 $binary = $this->request(method: 'get', uri: 'download', data: ['authoritory_and_path' => $aap]);
-                $message->setBinary($binary);
+
+                $message->setDataUri(data: $binary, mime: $raw['content']['info']['mimetype']);
 
                 $events[] = $message;
             }

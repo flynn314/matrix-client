@@ -13,6 +13,7 @@ class Message
 
     private readonly \DateTimeImmutable $createdAt;
     private string|null $binary = null;
+    private string|null $datauri = null;
     private array $info = [];
     private string $summary = '';
     private string|null $extraData = null;
@@ -33,7 +34,16 @@ class Message
 
     public function getBinary(): string|null
     {
-        return $this->binary;
+        if (!$this->getDataUri()) {
+            return null;
+        }
+
+        return $this->binary; // todo decode from datauri
+    }
+
+    public function getDataUri(): string|null
+    {
+        return $this->datauri;
     }
 
     public function getInfo(): array
@@ -61,9 +71,10 @@ class Message
         return $this->extraData;
     }
 
-    public function setBinary(string $data): static
+    public function setDataUri(string $data, string $mime): static
     {
-        $this->binary = $data;
+        $this->binary = $data; // todo remove
+        $this->datauri = 'data:' . $mime . ';base64,' . base64_encode($data);
 
         return $this;
     }
