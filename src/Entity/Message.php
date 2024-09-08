@@ -9,8 +9,11 @@ class Message
     public const TYPE_ACTION = 'action';
     public const TYPE_EVENT = 'event';
     public const TYPE_FILE = 'file';
+    public const TYPE_IMAGE = 'image';
 
     private readonly \DateTimeImmutable $createdAt;
+    private string|null $binary = null;
+    private array $info = [];
     private string $summary = '';
     private string|null $extraData = null;
 
@@ -26,6 +29,16 @@ class Message
     public function getBody(): string
     {
         return $this->body;
+    }
+
+    public function getBinary(): string|null
+    {
+        return $this->binary;
+    }
+
+    public function getInfo(): array
+    {
+        return $this->info;
     }
 
     public function getSummary(): string
@@ -46,6 +59,20 @@ class Message
     public function getExtraData(): string|null
     {
         return $this->extraData;
+    }
+
+    public function setBinary(string $data): static
+    {
+        $this->binary = $data;
+
+        return $this;
+    }
+
+    public function setInfo(array $info): static
+    {
+        $this->info = $info;
+
+        return $this;
     }
 
     public function setSummary(string $summary): static
@@ -75,5 +102,10 @@ class Message
     public function isFile(): bool
     {
         return static::TYPE_FILE === $this->type;
+    }
+
+    public function isImage(): bool
+    {
+        return static::TYPE_IMAGE === $this->type;
     }
 }

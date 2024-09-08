@@ -37,12 +37,22 @@ readonly class MatrixClient
             if (!isset($raw['content']['msgtype'])) {
                 continue;
             }
-            if ('m.text' === $raw['content']['msgtype']) {
-                $createdAt = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->setTimestamp((int) ($raw['origin_server_ts'] / 1000));
+
+            $createdAt = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->setTimestamp((int) ($raw['origin_server_ts'] / 1000));
+
+            if (MsgType::TEXT === $raw['content']['msgtype']) {
                 $events[] = new Message(new Sender($raw['sender'], $raw['user_id']), trim((string) $raw['content']['body']), $createdAt);
-            } elseif ('m.emote' === $raw['content']['msgtype']) {
-                $createdAt = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->setTimestamp((int) ($raw['origin_server_ts'] / 1000));
+            } elseif (MsgType::EMOTE === $raw['content']['msgtype']) {
                 $events[] = new Message(new Sender($raw['sender'], $raw['user_id']), trim((string) $raw['content']['body']), $createdAt, Message::TYPE_ACTION);
+            } elseif (MsgType::IMAGE === $raw['content']['msgtype']) {
+                $message = new Message(new Sender($raw['sender'], $raw['user_id']), trim((string) $raw['content']['body']), $createdAt, Message::TYPE_IMAGE);
+                $message->setInfo($raw['content']['info'] ?? []);
+
+                list($protocol, $aap) = explode('//', $raw['content']['url'], 2);
+                $binary = $this->request(method: 'get', uri: 'download', data: ['authoritory_and_path' => $aap]);
+                $message->setBinary($binary);
+
+                $events[] = $message;
             }
         }
 
@@ -296,14 +306,15 @@ readonly class MatrixClient
     /**
      * @throws MatrixClientException
      */
-    private function request(string $method, string $uri, array $data = [], array $header = []): array
+    private function request(string $method, string $uri, array $data = [], array $header = []): array|string
     {
-        if (isset($data['binary'])) {
+        if (isset($data['authoritory_and_path'])) {
+            $uri = sprintf('%s/_matrix/media/r0/%s/%s', $this->baseUrl, $uri, $data['authoritory_and_path']);
+        } elseif (isset($data['binary'])) {
             $uri = sprintf('%s/_matrix/media/v3/%s', $this->baseUrl, $uri);
         } else {
             $uri = sprintf('%s/_matrix/client/v3/%s', $this->baseUrl, $uri);
         }
-
 
         $header['Authorization'] = 'Bearer ' . $this->token;
         if (!isset($header['Content-Type'])) {
@@ -313,7 +324,9 @@ readonly class MatrixClient
             'headers' => $header,
         ];
 
-        if (isset($data['binary'])) {
+        if (isset($data['authoritory_and_path'])) {
+            // no need body
+        } elseif (isset($data['binary'])) {
             $options['body'] = $data['binary'];
             unset($data['binary']);
         } else {
@@ -325,7 +338,11 @@ readonly class MatrixClient
             $response = $this->httpClient->request($method, $uri, $options);
             $content = $response->getBody()->getContents();
 
-            return json_decode($content, true);
+            if (isset($data['authoritory_and_path'])) {
+                return $content;
+            } else {
+                return json_decode($content, true);
+            }
         } catch (GuzzleException $e) {
             throw new MatrixClientException($e->getMessage(), $e->getCode(), $e->getPrevious());
         }
