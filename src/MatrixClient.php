@@ -233,7 +233,7 @@ readonly class MatrixClient
     /**
      * @throws MatrixClientException
      */
-    private function postRoomMessage(string $roomId, string $body, string $formattedBody = null, ?string $threadId = null, array $data = []): string
+    public function postRoomMessage(string $roomId, string $body, string $formattedBody = null, ?string $threadId = null, array $data = []): string
     {
         $data['msgtype'] = (new MsgType($data['msgtype'] ?? MsgType::TEXT))->getValue();
         $data['body'] = $body;
