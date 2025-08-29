@@ -48,8 +48,7 @@ readonly class MatrixClient
                 $message = new Message(new Sender($raw['sender'], $raw['user_id']), trim((string) $raw['content']['body']), $createdAt, Message::TYPE_IMAGE);
                 $message->setInfo($raw['content']['info']);
 
-                list($protocol, $aap) = explode('//', $raw['content']['url'], 2);
-                $binary = $this->request(method: 'get', uri: 'download', data: ['authoritory_and_path' => $aap]);
+                $binary = $this->getFileBinaryByUri($raw['content']['url']);
 
                 $message->setDataUri(data: $binary, mime: $raw['content']['info']['mimetype']);
 
@@ -302,6 +301,13 @@ readonly class MatrixClient
     public function typingIndicatorStop(string $roomId): void
     {
         $this->typingIndicatorStart($roomId, 0);
+    }
+
+    public function getFileBinaryByUri(string $url): string
+    {
+        list($protocol, $aap) = explode('//', $url, 2);
+
+        return $this->request(method: 'get', uri: 'download', data: ['authoritory_and_path' => $aap]);
     }
 
     /**
