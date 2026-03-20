@@ -316,7 +316,8 @@ readonly class MatrixClient
     private function request(string $method, string $uri, array $data = [], array $header = []): array|string
     {
         if (isset($data['authoritory_and_path'])) {
-            $uri = sprintf('%s/_matrix/media/v3/%s/%s', $this->baseUrl, $uri, $data['authoritory_and_path']);
+            // fix for non-downloadable medias https://github.com/openclaw/openclaw/issues/7788
+            $uri = sprintf('%s/_matrix/client/v1/media/%s/%s', $this->baseUrl, $uri, $data['authoritory_and_path']);
         } elseif (isset($data['binary'])) {
             $uri = sprintf('%s/_matrix/media/v3/%s', $this->baseUrl, $uri);
         } else {
